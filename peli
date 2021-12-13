@@ -1,0 +1,259 @@
+import pygame, random
+
+class Peli:
+    def __init__(self):
+        pygame.init()
+
+        self.vaikeusaste=15
+        self.hirviosuunta=9
+
+        self.leveys, self.korkeus = 1500, 1000
+
+        self.hirvio = pygame.image.load("hirvio.png")
+        self.kolikko = pygame.image.load("kolikko.png")
+        self.ovi = pygame.image.load("ovi.png")
+        self.robo = pygame.image.load("robo.png")
+
+        self.napit = []
+        # nappi, kumpi robotti liikkuu, vaakaliike, pystyliike
+        self.napit.append((pygame.K_LEFT, 0, -4, 0))
+        self.napit.append((pygame.K_RIGHT, 0, 4, 0))
+        self.napit.append((pygame.K_UP, 0, 0, -4))
+        self.napit.append((pygame.K_DOWN, 0, 0, 4))
+        self.napit.append((pygame.K_a, 1, -4, 0))
+        self.napit.append((pygame.K_d, 1, 4, 0))
+        self.napit.append((pygame.K_w, 1, 0, -4))
+        self.napit.append((pygame.K_s, 1, 0, 4))
+
+        self.naytto = pygame.display.set_mode((self.leveys, self.korkeus))
+
+        self.fontti = pygame.font.SysFont("Arial", 24)
+
+        pygame.display.set_caption("pelipeli")
+
+        self.kello = pygame.time.Clock()
+ 
+        self.painettu = {}
+
+        self.silmukka()
+
+
+    def uusi_peli(self):
+        # tyyppien kohdat
+        self.kohdat = [[self.leveys*(2/3)-self.robo.get_width()/2, self.korkeus/2-self.robo.get_height()/2], [self.leveys*(1/3)-self.robo.get_width()/2, self.korkeus/2-self.robo.get_height()/2]]
+        self.hirviot = []
+        self.kolikot=[]
+        self.pisteet=[0, 0]
+        self.syoty=[0, 0]
+        #ovet [vasen, ala, ylä, oikea]
+        self.ovet=[(0, self.korkeus/2-self.ovi.get_height()/2), (self.leveys/2-self.ovi.get_width()/2, self.korkeus-self.ovi.get_height()), (self.leveys/2-self.ovi.get_width()/2, 0), (self.leveys-self.ovi.get_width(), self.korkeus/2-self.ovi.get_height()/2)]
+
+        for i in range(self.vaikeusaste):
+            self.uusi_hirvio()
+
+    def uusi_hirvio(self):
+        x=random.randint(0,3)
+        if x == 0:
+            self.hirviot.append([random.randint(0, self.leveys-self.hirvio.get_width()), -self.hirvio.get_height(), 0, 0])
+            if self.hirviot[-1][0]<self.leveys/2:
+                self.hirviot[-1][2]=1+0.1*random.randint(-self.hirviosuunta, self.hirviosuunta)
+                self.hirviot[-1][3]=1+0.1*random.randint(-self.hirviosuunta, self.hirviosuunta)
+            else:
+                self.hirviot[-1][2]=-1+0.1*random.randint(-self.hirviosuunta, self.hirviosuunta)
+                self.hirviot[-1][3]=1+0.1*random.randint(-self.hirviosuunta, self.hirviosuunta)
+        elif x == 1:
+            self.hirviot.append([-self.hirvio.get_width(), random.randint(0, self.korkeus-self.hirvio.get_height()), 0, 0])
+            if self.hirviot[-1][1]<self.korkeus/2:
+                self.hirviot[-1][2]=1+0.1*random.randint(-self.hirviosuunta, self.hirviosuunta)
+                self.hirviot[-1][3]=1+0.1*random.randint(-self.hirviosuunta, self.hirviosuunta)
+            else:
+                self.hirviot[-1][2]=1+0.1*random.randint(-self.hirviosuunta, self.hirviosuunta)
+                self.hirviot[-1][3]=-1+0.1*random.randint(-self.hirviosuunta, self.hirviosuunta)
+        elif x == 2:
+            self.hirviot.append([self.leveys, random.randint(0, self.korkeus-self.hirvio.get_height()), 0, 0])
+            if self.hirviot[-1][1]<self.korkeus/2:
+                self.hirviot[-1][2]=-1+0.1*random.randint(-self.hirviosuunta, self.hirviosuunta)
+                self.hirviot[-1][3]=1+0.1*random.randint(-self.hirviosuunta, self.hirviosuunta)
+            else:
+                self.hirviot[-1][2]=-1+0.1*random.randint(-self.hirviosuunta, self.hirviosuunta)
+                self.hirviot[-1][3]=-1+0.1*random.randint(-self.hirviosuunta, self.hirviosuunta)
+        else:
+            self.hirviot.append([random.randint(0, self.leveys-self.hirvio.get_width()), self.korkeus, 0, 0])
+            if self.hirviot[-1][0]<self.korkeus/2:
+                self.hirviot[-1][2]=1+0.1*random.randint(-self.hirviosuunta, self.hirviosuunta)
+                self.hirviot[-1][3]=-1+0.1*random.randint(-self.hirviosuunta, self.hirviosuunta)
+            else:
+                self.hirviot[-1][2]=-1+0.1*random.randint(-self.hirviosuunta, self.hirviosuunta)
+                self.hirviot[-1][3]=-1+0.1*random.randint(-self.hirviosuunta, self.hirviosuunta)
+
+    def silmukka(self):
+        self.uusi_peli()
+        while True:
+            if random.randint(0,130) == 0:
+                self.uusi_kolikko()
+            self.tutki_tapahtumat()
+            if max(self.pisteet) < 10:
+                self.liiku()
+                self.piirra_naytto()
+
+            if max(self.pisteet) >= 10:
+                self.piirra_voitto()
+
+            self.kello.tick(60)
+
+    def tutki_tapahtumat(self):
+        for tapahtuma in pygame.event.get():
+            if tapahtuma.type == pygame.KEYDOWN:
+                self.painettu[tapahtuma.key] = True
+
+                if tapahtuma.key == pygame.K_F2:
+                    self.uusi_peli()
+                if tapahtuma.key == pygame.K_ESCAPE:
+                    exit()
+                
+            if tapahtuma.type == pygame.KEYUP:
+                del self.painettu[tapahtuma.key]
+    
+            if tapahtuma.type == pygame.QUIT:
+                exit()
+
+
+    def liiku(self):    
+        for nappi in self.napit:
+            if nappi[0] in self.painettu: #käydään läpi painetut napit [mikä nappi, pelaaja, x, y]
+                if nappi[2] < 0 and self.kohdat[nappi[1]][0] > 0: #pelaajan x-koordinaatti
+                    self.kohdat[nappi[1]][0] += nappi[2]
+                if nappi[2] > 0 and self.kohdat[nappi[1]][0] < self.leveys-self.robo.get_width():
+                    self.kohdat[nappi[1]][0] += nappi[2]
+                if nappi[3] < 0 and self.kohdat[nappi[1]][1] > 0:
+                    self.kohdat[nappi[1]][1] += nappi[3]
+                if nappi[3] > 0 and self.kohdat[nappi[1]][1] < self.korkeus-self.robo.get_height():
+                    self.kohdat[nappi[1]][1] += nappi[3]
+
+        for robo in self.kohdat:
+            for ovi in self.ovet:
+                if self.koskettaako(self.robo, (robo[0], robo[1]), self.ovi, ovi):
+                    if ovi == self.ovet[0]:
+                        robo[0] = self.leveys-self.ovi.get_width()-10-self.robo.get_width()
+                        robo[1] = self.korkeus/2-self.robo.get_height()/2
+                    if ovi == self.ovet[3]:
+                        robo[0] = self.ovi.get_width()+10
+                        robo[1] = self.korkeus/2-self.robo.get_height()/2
+                    if ovi == self.ovet[1]:
+                        robo[0] = self.leveys/2-self.robo.get_width()/2
+                        robo[1] = self.ovi.get_height()+10
+                    if ovi == self.ovet[2]:
+                        robo[0] = self.leveys/2-self.robo.get_width()/2
+                        robo[1] = self.korkeus-self.ovi.get_height()-10-self.robo.get_height()
+            for kolikko in self.kolikot:
+                if self.koskettaako(self.robo, (robo[0], robo[1]), self.kolikko, kolikko):
+                    self.kolikon_kerays(self.kohdat.index(robo), kolikko)
+            for hirvio in self.hirviot:
+                if self.koskettaako(self.robo, (robo[0], robo[1]), self.hirvio, (hirvio[0], hirvio[1])):
+                    self.pisteet[self.kohdat.index(robo)]=0
+                    self.syoty[self.kohdat.index(robo)]=100
+
+        for hirvio in self.hirviot:
+            hirvio[0] += hirvio[2]
+            hirvio[1] += hirvio[3]
+            if hirvio[3]>0 and hirvio[1]+self.hirvio.get_height()>=self.korkeus:
+                hirvio[3]=-hirvio[3]
+            if hirvio[3]<0 and hirvio[1]<=0:
+                hirvio[3]=-hirvio[3]
+            if hirvio[2]>0 and hirvio[0]+self.hirvio.get_width()>=self.leveys:
+                hirvio[2]=-hirvio[2]
+            if hirvio[2]<0 and hirvio[0]<=0:
+                hirvio[2]=-hirvio[2]
+
+    def piirra_naytto(self):
+        self.naytto.fill((153, 153, 153))
+
+        teksti = self.fontti.render("F2 = uusi peli", True, (240, 0, 0))
+        self.naytto.blit(teksti, (270, 0))
+
+        teksti = self.fontti.render("Esc = sulje", True, (240, 0, 0))
+        self.naytto.blit(teksti, (430, 0))
+
+        teksti = self.fontti.render(f"Vasen: {self.pisteet[1]}/10", True, (240, 0, 0))
+        self.naytto.blit(teksti, (50, 0))
+        
+        teksti = self.fontti.render(f"Oikea: {self.pisteet[0]}/10", True, (240, 0, 0))
+        self.naytto.blit(teksti, (self.leveys-50-teksti.get_width(), 0))
+
+        if self.syoty[0] > 0:
+            teksti = self.fontti.render("KUMMITUS SÖI PISTEET", True, (240, 0, 0))
+            self.naytto.blit(teksti, (self.leveys-teksti.get_width()-50, 50))
+            self.syoty[0]-=1
+
+        if self.syoty[1] > 0:
+            teksti = self.fontti.render("KUMMITUS SÖI PISTEET", True, (240, 0, 0))
+            self.naytto.blit(teksti, (50, 50))
+            self.syoty[1]-=1
+
+        #ovet
+        self.naytto.blit(self.ovi, self.ovet[0]) #vasen
+        self.naytto.blit(self.ovi, self.ovet[1]) #ala
+        self.naytto.blit(self.ovi, self.ovet[2]) #ylä
+        self.naytto.blit(self.ovi, self.ovet[3]) #oikea
+
+        for kolikko in self.kolikot:
+            self.naytto.blit(self.kolikko, kolikko)
+
+        for robotti in self.kohdat:
+            self.naytto.blit(self.robo, (robotti[0], robotti[1]))
+
+        for hirvio in self.hirviot:
+            self.naytto.blit(self.hirvio, (hirvio[0], hirvio[1]))
+
+        pygame.display.flip()
+    
+    def piirra_voitto(self):
+        if self.voittaja() == 0:
+            voittaja='oikeanpuoleinen pelaaja'
+        else:
+            voittaja='vasemmanpuoleinen pelaaja'
+        teksti = self.fontti.render(f"{voittaja} voitti", True, (255, 0, 0))
+        teksti_x = self.leveys/2 - teksti.get_width() / 2
+        teksti_y = self.korkeus/2 - teksti.get_height() / 2
+        pygame.draw.rect(self.naytto, (0, 0, 0), (teksti_x, teksti_y, teksti.get_width(), teksti.get_height()))
+        self.naytto.blit(teksti, (teksti_x, teksti_y))
+
+        pygame.display.flip()
+
+    def voittaja(self):
+        if self.pisteet[0] < self.pisteet[1]:
+            return 1
+        else:
+            return 0
+
+    def koskettaako(self, obj1, obj1_sijainti: tuple, obj2, obj2_sijainti: tuple):
+        if obj1_sijainti[0] <= obj2_sijainti[0]+obj2.get_width() and obj1_sijainti[0]+obj1.get_width() >= obj2_sijainti[0]: #x-koordinaatti
+            if obj1_sijainti[1] <= obj2_sijainti[1]+obj2.get_height() and obj1_sijainti[1]+obj1.get_height() >= obj2_sijainti[1]: #y-koordinaatti
+                return True
+        return False
+
+    def uusi_kolikko(self):
+        while True:
+            koskettaako=[]
+            x=random.randint(0, self.leveys-self.kolikko.get_width())
+            y=random.randint(0, self.korkeus-self.kolikko.get_height())
+            for ovi in self.ovet:
+                if self.koskettaako(self.kolikko, (x, y), self.ovi, ovi):
+                    koskettaako.append(1)
+            for robo in self.kohdat:
+                if self.koskettaako(self.kolikko, (x, y), self.robo, (robo[0], robo[1])):
+                    koskettaako.append(1)
+            for kolikko in self.kolikot:
+                if self.koskettaako(self.kolikko, (x, y), self.kolikko, kolikko):
+                    koskettaako.append(1)
+            if 1 not in koskettaako:
+                break
+        
+        self.kolikot.append((x, y))
+    
+    def kolikon_kerays(self, pelaaja: int, kolikko: tuple):
+        self.kolikot.remove(kolikko)
+        self.pisteet[pelaaja]+=1
+
+
+Peli()
